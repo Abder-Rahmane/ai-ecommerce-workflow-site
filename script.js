@@ -30,6 +30,8 @@ const SITE_CONFIG = {
   // Must match the "wide" hero layout query in styles.css
   const wideMQ = mq('(min-width: 981px), (min-width: 640px) and (orientation: landscape)');
   const navDesktopMQ = mq('(min-width: 900px)');
+  // Must match the pinned-scene query in styles.css (desktop, tall enough, motion allowed)
+  const pinMQ = mq('(min-width: 900px) and (min-height: 600px) and (prefers-reduced-motion: no-preference)');
   const root = document.documentElement;
   const TAU = Math.PI * 2;
 
@@ -122,29 +124,77 @@ const SITE_CONFIG = {
     $$('[data-anim]').forEach((el) => vis.observe(el));
   }
 
-  /* ------------------------------------- Workflow: progression follows scroll */
-  function createFlow() {
-    const flow = $('#flow');
-    if (!flow) return () => {};
-    const nodes = $$('.fnode', flow);
-    flow.classList.add('flow-js');
-    let shown = -1;
+  /* ------------------------------------------ Workflow stage: Discover → Build → Operate
+     Desktop: one pinned scene; the scroll position (a ~1-viewport run) selects the active step.
+     Elsewhere: three compact blocks, each activated once when it comes into view. */
+  function createStage() {
+    const track = $('#stage');
+    if (!track) return () => {};
+    const pin = $('.stage-pin', track);
+    const steps = $$('.step', track);
+    const rail = $$('.rail-btn', track);
+    const CUTS = [0.34, 0.67];                       // scroll progress where Build / Operate take over
+    let active = -1;
+    let blocksObserver = null;
 
-    const paint = (n) => {
-      if (n === shown) return;
-      shown = n;
-      nodes.forEach((el, i) => el.classList.toggle('lit', i < n));
-      flow.classList.toggle('is-complete', n >= nodes.length && !reduceMQ.matches);
+    const fire = (el, name) => el.dispatchEvent(new CustomEvent(name));
+    const setActive = (n) => {
+      if (n === active) return;
+      const prev = active;
+      active = n;
+      steps.forEach((s, i) => {
+        s.classList.toggle('is-active', i === n);
+        s.classList.toggle('is-past', i < n);
+        if (i === n) fire(s, 'stage:activate'); else if (i === prev) fire(s, 'stage:deactivate');
+      });
+      rail.forEach((b, i) => { b.classList.toggle('on', i === n); if (i === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
     };
-    if (reduceMQ.matches) { paint(nodes.length); return () => {}; }
 
-    return () => {
-      const r = flow.getBoundingClientRect();
-      const vh = window.innerHeight;
-      if (r.bottom < -100 || r.top > vh + 100) return;           // off-screen: nothing to do
-      const p = clamp((vh * 0.85 - r.top) / (r.height + vh * 0.2), 0, 1);
-      paint(Math.ceil(p * nodes.length - 0.001));
+    // Blocks mode (phones, tablets, reduced motion): activate each block once, as it scrolls into view.
+    const startBlocks = () => {
+      if (blocksObserver) return;
+      active = -2;
+      steps.forEach((s) => s.classList.remove('is-active', 'is-past'));
+      if (reduceMQ.matches) { steps.forEach((s) => s.classList.add('is-active')); return; }   // reduced motion: everything shown at once
+      if (!('IntersectionObserver' in window)) { steps.forEach((s) => { s.classList.add('is-active'); fire(s, 'stage:activate'); }); return; }
+      blocksObserver = new IntersectionObserver((entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return;
+          en.target.classList.add('is-active'); fire(en.target, 'stage:activate'); blocksObserver.unobserve(en.target);
+        });
+      }, { threshold: 0.2, rootMargin: '0px 0px -8% 0px' });
+      steps.forEach((s) => blocksObserver.observe(s));
     };
+    const stopBlocks = () => { if (blocksObserver) { blocksObserver.disconnect(); blocksObserver = null; } };
+
+    const geometry = () => {
+      const stickyTop = parseFloat(getComputedStyle(pin).top) || 0;
+      const run = Math.max(1, track.offsetHeight - pin.offsetHeight);
+      return { stickyTop, run, top: track.getBoundingClientRect().top + window.scrollY };
+    };
+
+    rail.forEach((btn) => btn.addEventListener('click', () => {
+      if (!pinMQ.matches) return;
+      const n = parseInt(btn.dataset.go, 10);
+      const g = geometry();
+      const p = n === 0 ? 0 : CUTS[n - 1] + 0.04;
+      window.scrollTo({ top: g.top - g.stickyTop + p * g.run, behavior: 'smooth' });
+    }));
+
+    let mode = '';
+    const update = () => {
+      if (!pinMQ.matches) {
+        if (mode !== 'blocks') { mode = 'blocks'; active = -1; track.style.removeProperty('--sp'); startBlocks(); }
+        return;
+      }
+      if (mode !== 'pin') { mode = 'pin'; stopBlocks(); active = -1; }
+      const g = geometry();
+      const p = clamp((g.stickyTop - track.getBoundingClientRect().top) / g.run, 0, 1);
+      track.style.setProperty('--sp', (0.04 + 0.96 * p).toFixed(3));
+      setActive(p < CUTS[0] ? 0 : p < CUTS[1] ? 1 : 2);
+    };
+    onChange(pinMQ, update);
+    return update;
   }
 
   /* ---------------------------------------------------- Scroll-linked effects */
@@ -152,7 +202,7 @@ const SITE_CONFIG = {
     const header = $('#site-header');
     const bar = $('.progress');
     const hero = $('#top');
-    const flowUpdate = createFlow();
+    const stageUpdate = createStage();
     let ticking = false;
 
     const update = () => {
@@ -162,7 +212,7 @@ const SITE_CONFIG = {
       if (bar) bar.style.setProperty('--p', max > 0 ? Math.min(1, y / max).toFixed(4) : 0);
       if (header) header.classList.toggle('is-scrolled', y > 12);
       if (hero && y < hero.offsetHeight) hero.style.setProperty('--hp', clamp(y / (hero.offsetHeight * 0.85), 0, 1).toFixed(3));
-      flowUpdate();
+      stageUpdate();
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -201,13 +251,15 @@ const SITE_CONFIG = {
     });
   }
 
-  /* -------------------------------------- Sequences (approval stepper, …) */
+  /* -------------------------------------- Sequences (approval stepper, …)
+     A sequence inside a stage plays when that stage becomes active; others play while visible. */
   function initSequences() {
     $$('[data-seq]').forEach((box) => {
       const items = $$('.seq-item', box);
       if (!items.length) return;
       const mode = box.dataset.seq;
       const step = parseInt(box.dataset.step, 10) || 1200;
+      const owner = box.closest('.step');
       let i = -1;
       let timer = 0;
 
@@ -221,10 +273,17 @@ const SITE_CONFIG = {
           items.forEach((it, n) => it.classList.toggle('on', n === i % items.length));
         }
       };
-      const start = () => { if (!timer && !reduceMQ.matches) { tick(); timer = window.setInterval(tick, step); } };
       const stop = () => { window.clearInterval(timer); timer = 0; };
+      const start = () => { if (!timer && !reduceMQ.matches) { tick(); timer = window.setInterval(tick, step); } };
+      const restart = () => { stop(); i = -1; items.forEach((it) => it.classList.remove('on')); start(); };
 
-      if (reduceMQ.matches || !('IntersectionObserver' in window)) { showStatic(); return; }
+      if (reduceMQ.matches) { showStatic(); return; }
+      if (owner) {
+        owner.addEventListener('stage:activate', restart);
+        owner.addEventListener('stage:deactivate', stop);
+        return;
+      }
+      if (!('IntersectionObserver' in window)) { showStatic(); return; }
       new IntersectionObserver((entries) => entries.forEach((en) => (en.isIntersecting ? start() : stop())), { threshold: 0.25 }).observe(box);
     });
   }

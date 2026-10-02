@@ -81,7 +81,6 @@
       <nav class="nav" id="primary-nav" aria-label="Primary">
         <ul>
           <li><a href="#workflow">Workflow</a></li>
-          <li><a href="#capabilities">Capabilities</a></li>
           <li><a href="#learning">Learning</a></li>
           <li><a href="#about">About</a></li>
         </ul>
@@ -115,46 +114,32 @@
       <a class="scroll-cue" href="#workflow" aria-label="Scroll to the workflow"><i></i></a>
     </section>
 
-    <!-- ============ WORKFLOW ============ -->
-    <section class="section" id="workflow" data-anim aria-labelledby="workflow-title">
+    <!-- ============ WORKFLOW: DISCOVER → BUILD → OPERATE ============ -->
+    <section class="section section--stage" id="workflow" data-anim aria-labelledby="stage-title">
       <div class="container">
-        <header class="section-head">
-          <p class="eyebrow reveal">Workflow</p>
-          <h2 id="workflow-title" class="reveal">One loop, from signal to result.</h2>
-          <p class="section-lede reveal">Each stage hands its context to the next. The last one feeds the first.</p>
-        </header>
+        <h2 id="stage-title" class="sr-only">Discover, build, operate</h2>
+        <p class="eyebrow stage-eyebrow reveal">Workflow</p>
 
-        <ol class="flow" id="flow" aria-label="Eight workflow stages arranged as a loop">
-          <li class="fnode" style="--i:0"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">01</span><b>Signal</b><small>Spot rising demand.</small><div class="fn-tags"><em class="phase">Discover</em></div></li>
-          <li class="fnode" style="--i:1"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">02</span><b>Validate</b><small>Test the evidence.</small><div class="fn-tags"><em class="phase">Discover</em></div></li>
-          <li class="fnode" style="--i:2"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">03</span><b>Source</b><small>Compare suppliers and margins.</small><div class="fn-tags"><em class="phase">Build</em><span class="gate">Human review</span></div></li>
-          <li class="fnode" style="--i:3"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">04</span><b>Offer</b><small>Shape the price and the promise.</small><div class="fn-tags"><em class="phase">Build</em></div></li>
-          <li class="fnode" style="--i:4"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">05</span><b>Create</b><small>Concepts, hooks and assets.</small><div class="fn-tags"><em class="phase">Build</em></div></li>
-          <li class="fnode" style="--i:5"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">06</span><b>Launch</b><small>Storefront and campaigns.</small><div class="fn-tags"><em class="phase">Operate</em><span class="gate">Approval required</span></div></li>
-          <li class="fnode" style="--i:6"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">07</span><b>Measure</b><small>Track what actually happens.</small><div class="fn-tags"><em class="phase">Operate</em></div></li>
-          <li class="fnode" style="--i:7"><i class="fn-dot" aria-hidden="true"></i><span class="fn-num">08</span><b>Learn</b><small>Send results back to Signal.</small><div class="fn-tags"><em class="phase">Operate</em></div></li>
-        </ol>
-      </div>
-    </section>
+        <div class="stage" id="stage" data-stage>
+          <div class="stage-pin">
+            <nav class="rail" aria-label="Workflow stages">
+              <button class="rail-btn on" type="button" data-go="0"><span>01</span>Discover</button>
+              <button class="rail-btn" type="button" data-go="1"><span>02</span>Build</button>
+              <button class="rail-btn" type="button" data-go="2"><span>03</span>Operate</button>
+              <i class="rail-fill" aria-hidden="true"></i>
+            </nav>
 
-    <!-- ============ CAPABILITIES ============ -->
-    <section class="section section--caps" id="capabilities" data-anim aria-labelledby="caps-title">
-      <div class="container">
-        <header class="section-head">
-          <p class="eyebrow reveal">Capabilities</p>
-          <h2 id="caps-title" class="reveal">Discover. Build. Operate.</h2>
-        </header>
-
-        <!-- Discover -->
-        <article class="cap">
-          <div class="cap-text" data-stagger>
-            <p class="cap-no reveal">01</p>
-            <h3 class="reveal">Discover</h3>
-            <p class="cap-lede reveal">Find opportunities and validate what deserves to move forward.</p>
-            <ul class="cap-points reveal"><li>Market signals</li><li>Evidence</li><li>Scoring</li></ul>
-          </div>
-          <div class="cap-visual reveal">
-            <figure class="disc" aria-label="Illustration: several market signals converging on one candidate product">
+            <div class="stage-body">
+              <!-- Discover -->
+              <article class="step is-active" data-step="0">
+                <div class="step-text">
+                  <p class="step-no">01</p>
+                  <h3>Discover</h3>
+                  <p class="step-lede">Find opportunities worth pursuing.</p>
+                  <ul class="steps-chips"><li>Signal</li><li>Validate</li></ul>
+                </div>
+                <div class="step-visual">
+                  <figure class="disc" aria-label="Illustration: several market signals converging on one candidate product">
               <div class="disc-signals" aria-hidden="true">
                 <div><span class="chip">Search trends</span></div>
                 <div><span class="chip">Social signals</span></div>
@@ -190,19 +175,19 @@
                 </ul>
               </div>
             </figure>
-          </div>
-        </article>
+                </div>
+              </article>
 
-        <!-- Build -->
-        <article class="cap cap--rev">
-          <div class="cap-text" data-stagger>
-            <p class="cap-no reveal">02</p>
-            <h3 class="reveal">Build</h3>
-            <p class="cap-lede reveal">Turn a validated opportunity into an offer, creative assets and a storefront.</p>
-            <ul class="cap-points reveal"><li>Offer</li><li>Creative</li><li>Storefront</li></ul>
-          </div>
-          <div class="cap-visual reveal">
-            <div class="build tilt" data-tilt="5" aria-hidden="true">
+              <!-- Build -->
+              <article class="step" data-step="1">
+                <div class="step-text">
+                  <p class="step-no">02</p>
+                  <h3>Build</h3>
+                  <p class="step-lede">Turn validated opportunities into offers, creative and storefronts.</p>
+                  <ul class="steps-chips"><li>Source</li><li>Offer</li><li>Create</li></ul>
+                </div>
+                <div class="step-visual">
+                  <div class="build tilt" data-tilt="5" aria-hidden="true">
               <div class="shop">
                 <div class="shop-bar"><i></i><i></i><i></i><span>store preview</span></div>
                 <div class="shop-body">
@@ -226,19 +211,20 @@
                 <div class="ad-copy"><small>ANGLE</small><b>Before / after.</b></div>
               </div>
             </div>
-          </div>
-        </article>
+                </div>
+              </article>
 
-        <!-- Operate -->
-        <article class="cap">
-          <div class="cap-text" data-stagger>
-            <p class="cap-no reveal">03</p>
-            <h3 class="reveal">Operate</h3>
-            <p class="cap-lede reveal">Launch controlled experiments, measure performance and feed results back into the next decision.</p>
-            <ul class="cap-points reveal"><li>Approval gates</li><li>Budget limits</li><li>Monitoring</li></ul>
-          </div>
-          <div class="cap-visual reveal">
-            <div class="approval tilt" data-tilt="4" aria-hidden="true">
+              <!-- Operate -->
+              <article class="step" data-step="2">
+                <div class="step-text">
+                  <p class="step-no">03</p>
+                  <h3>Operate</h3>
+                  <p class="step-lede">Launch, measure and improve what happens next.</p>
+                  <ul class="steps-chips"><li>Launch</li><li>Measure</li></ul>
+                  <p class="fineprint">Designed to connect to advertising platform APIs, such as TikTok API for Business or Meta's marketing APIs, once access is granted. Not approved, certified or endorsed by any platform. Visuals are illustrative.</p>
+                </div>
+                <div class="step-visual">
+                  <div class="approval tilt" data-tilt="4" aria-hidden="true">
               <div class="ap-head"><div><small>Campaign draft</small><b>Spring launch · set A</b></div><span class="tag tag-accent">Awaiting approval</span></div>
               <dl class="ap-fields">
                 <div><dt>Objective</dt><dd>Conversions</dd></div>
@@ -246,7 +232,7 @@
                 <div><dt>Channels</dt><dd>Video · Feed</dd></div>
                 <div><dt>Creative</dt><dd>4 concepts</dd></div>
               </dl>
-              <ol class="stepper" data-seq="progress" data-step="1300">
+              <ol class="stepper" data-seq="progress" data-step="650">
                 <li class="seq-item"><i></i><span>Draft</span></li>
                 <li class="seq-item"><i></i><span>Review</span></li>
                 <li class="seq-item is-gate"><i></i><span>Approve</span></li>
@@ -255,10 +241,11 @@
               </ol>
               <div class="ap-actions"><span class="fake-btn fake-btn--ok">Approve</span><span class="fake-btn">Request changes</span><span class="fake-btn fake-btn--pause"><svg class="ico"><use href="#i-pause"/></svg>Pause</span></div>
             </div>
+                </div>
+              </article>
+            </div>
           </div>
-        </article>
-
-        <p class="fineprint reveal">Operator is designed to connect to advertising platform APIs — for example TikTok API for Business or Meta's marketing APIs — once appropriate access is granted. It has not been approved, certified or endorsed by any platform. Visuals on this page are illustrative concepts with placeholder content.</p>
+        </div>
       </div>
     </section>
 

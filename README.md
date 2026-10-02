@@ -9,7 +9,7 @@ index.html            Page principale (anglais)
 privacy.html          Privacy Policy
 terms.html            Terms of Service
 styles.css            Styles (mobile-first) + tokens de couleur / typo en haut du fichier
-script.js             Config email, menu mobile, scène 3D du hero, progression du workflow
+script.js             Config email, menu mobile, scène 3D du hero, scène épinglée Discover → Build → Operate
 favicon.svg           Favicon (même système visuel que le logo)
 assets/logo-mark.svg  Symbole du logo (couleur) · logo-mark-mono.svg (monochrome)
 assets/og-image.png   Image de partage (Open Graph / Twitter), 1200×630
@@ -151,7 +151,7 @@ Pensez aussi à la date `Last updated` dans `privacy.html` / `terms.html` quand 
 
 ## Personnalisation rapide
 
-- **Textes** : tout est dans `index.html`, section par section (Hero, Workflow, Capabilities, Learning loop, About, Contact).
+- **Textes** : tout est dans `index.html`, section par section (Hero, Workflow = Discover → Build → Operate, Learning loop, About, Contact).
 - **Couleurs et typographie** : variables CSS en haut de `styles.css` (`:root`) :
   `--bg #08090B`, `--ink #F4F4F2`, `--muted #8A8F98`, `--accent #7C5CFF` (`--accent-2 #A99BFF` pour le texte accentué), police `Geist` (corps 420, labels 500, titres 620).
 - **Logo** : le symbole est défini une seule fois (`<symbol id="logo">` dans chaque page) et existe en fichiers SVG dans `assets/`. Pour le changer, modifiez le `<symbol>` (index, privacy, terms), `favicon.svg` et `assets/logo-mark*.svg`.
