@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://abder-rahmane.github.io/ai-ecommerce-workflow-site/sitemap.xml
