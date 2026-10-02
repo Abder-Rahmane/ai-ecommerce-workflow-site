@@ -39,12 +39,10 @@ python3 -m http.server 8000
 ## 2. Publier sur GitHub Pages
 
 1. Poussez le code sur GitHub (déjà le cas pour ce dépôt).
-2. Le code se trouve sur la branche `claude/gracious-knuth-bg62bq`. Deux possibilités :
-   - **Recommandé** : fusionnez cette branche dans `main` (Pull Request, ou changez la branche par défaut dans *Settings → Branches*).
-   - Ou, à l'étape suivante, choisissez directement cette branche comme source.
+2. Le dépôt ne contient pour l'instant que la branche `claude/gracious-knuth-bg62bq` (il n'y a pas de `main`). Pas besoin d'en créer une : GitHub Pages peut publier n'importe quelle branche. (Si vous préférez une branche `main` plus tard : *Branches → Rename*, ou créez-la depuis cette branche, puis choisissez-la à l'étape 5.)
 3. Sur GitHub : **Settings → Pages**.
 4. *Build and deployment* → **Source : Deploy from a branch**.
-5. *Branch* : **`main`** (ou la branche choisie), dossier **`/ (root)`** → **Save**.
+5. *Branch* : **`claude/gracious-knuth-bg62bq`** (ou `main` si vous en avez créé une), dossier **`/ (root)`** → **Save**.
 6. Attendez 1 à 2 minutes. Le site est alors en ligne sur :
    `https://abder-rahmane.github.io/ai-ecommerce-workflow-site/`
 
