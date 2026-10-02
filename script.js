@@ -394,18 +394,11 @@ const SITE_CONFIG = {
       W = Math.max(1, Math.round(r.width));
       H = Math.max(1, Math.round(r.height));
       dpr = Math.min(window.devicePixelRatio || 1, quality === 2 ? 2 : 1.5);
+      wide = wideMQ.matches;
+      if (!wide) { canvas.width = canvas.height = 1; return; }     // stacked layout: no canvas work at all
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
-      wide = wideMQ.matches;
-      if (wide) {
-        cx = W * 0.72; cy = H * 0.53; S = Math.min(H * 0.33, W * 0.19);
-      } else {
-        // Stacked layout: the scene fills the gap between the headline and the supporting line.
-        const inner = $('.hero-inner', hero); const h1 = $('h1', hero); const lede = $('.lede', hero);
-        const top = inner.offsetTop + h1.offsetTop + h1.offsetHeight;
-        const gap = Math.max(160, inner.offsetTop + lede.offsetTop - top);
-        cx = W * 0.5; cy = top + gap / 2 + 4; S = Math.min(W * 0.4, gap * 0.46);
-      }
+      if (wide) { cx = W * 0.72; cy = H * 0.53; S = Math.min(H * 0.33, W * 0.19); }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!running) draw(2.4);
     }
@@ -621,11 +614,11 @@ const SITE_CONFIG = {
       } else if (emaDt <= 30) slow = 0;
     }
     function start() {
-      if (running || reduceMQ.matches || !visible || document.hidden) return;
+      if (running || reduceMQ.matches || !visible || document.hidden || !wideMQ.matches) return;   // stacked layout uses the CSS flow line instead
       running = true; last = performance.now(); raf = requestAnimationFrame(frame);
     }
     function stop() { running = false; cancelAnimationFrame(raf); }
-    const sync = () => { if (reduceMQ.matches) { stop(); draw(2.4); } else start(); };
+    const sync = () => { if (!wideMQ.matches) stop(); else if (reduceMQ.matches) { stop(); draw(2.4); } else start(); };
 
     /* Pointer parallax: fine pointers only */
     if (!coarseMQ.matches) {
@@ -645,7 +638,7 @@ const SITE_CONFIG = {
     }
     document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else start(); });
     onChange(reduceMQ, sync);
-    onChange(wideMQ, scheduleResize);
+    onChange(wideMQ, () => { scheduleResize(); sync(); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleResize);
 
     resize();

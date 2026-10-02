@@ -99,6 +99,7 @@
     <section class="hero" id="top" data-anim aria-labelledby="hero-title">
       <canvas id="hero-canvas" aria-hidden="true"></canvas>
       <div class="hero-vignette" aria-hidden="true"></div>
+      <div class="hero-glow" aria-hidden="true"></div>
 
       <div class="container hero-inner">
         <p class="status rise" style="--d:.05s"><span class="live-dot" aria-hidden="true"></span>In development</p>
@@ -107,6 +108,15 @@
         <div class="cta-row rise" style="--d:.38s">
           <a class="btn btn-primary" href="#workflow"><span>Explore the workflow</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
           <a class="btn btn-text" href="#contact">Contact</a>
+        </div>
+        <div class="hero-flow" aria-hidden="true">
+          <svg viewBox="0 0 360 120" focusable="false">
+            <path class="fl-base" d="M6.0 92.0 C20.3 81.7 61.3 29.0 92.0 30.0 C122.7 31.0 160.7 98.7 190.0 98.0 C219.3 97.3 240.7 33.0 268.0 26.0 C295.3 19.0 339.7 51.0 354.0 56.0" pathLength="100"/>
+            <path class="fl-glow" d="M6.0 92.0 C20.3 81.7 61.3 29.0 92.0 30.0 C122.7 31.0 160.7 98.7 190.0 98.0 C219.3 97.3 240.7 33.0 268.0 26.0 C295.3 19.0 339.7 51.0 354.0 56.0" pathLength="100"/>
+            <path class="fl-run" d="M6.0 92.0 C20.3 81.7 61.3 29.0 92.0 30.0 C122.7 31.0 160.7 98.7 190.0 98.0 C219.3 97.3 240.7 33.0 268.0 26.0 C295.3 19.0 339.7 51.0 354.0 56.0" pathLength="100"/>
+            <circle class="fn" cx="6.0" cy="92.0" r="4" style="--d:0.90s"/><circle class="fn" cx="51.1" cy="49.6" r="4" style="--d:1.74s"/><circle class="fn" cx="106.7" cy="34.8" r="4" style="--d:3.02s"/><circle class="fn" cx="152.7" cy="75.6" r="4" style="--d:4.31s"/><circle class="fn" cx="205.5" cy="91.9" r="4" style="--d:5.59s"/><circle class="fn" cx="244.6" cy="44.5" r="4" style="--d:6.88s"/><circle class="fn" cx="298.9" cy="29.4" r="4" style="--d:8.16s"/><circle class="fn" cx="354.0" cy="56.0" r="4" style="--d:9.45s"/>
+          </svg>
+          <p class="flow-ends"><span>Signal</span><span>Learn</span></p>
         </div>
         <p class="sr-only">Decorative animation: a product moves around a loop through eight stages — Signal, Validate, Source, Offer, Create, Launch, Measure and Learn — and what is learned flows back to the start.</p>
       </div>
