@@ -1,19 +1,22 @@
-# AI E-commerce Operator — site vitrine
+# Operator — site vitrine
 
-Site public statique de présentation du projet **AI E-commerce Operator** (projet en développement).
-100 % statique : pas de backend, pas de base de données, pas de login, aucune API, aucune dépendance externe (pas de CDN, pas de police web, pas de cookie).
+Site public statique de présentation de **Operator** *(Commerce Operations Platform)*, projet en développement dont le nom juridique/projet reste **AI E-commerce Operator** (mentionné discrètement dans le footer et les pages légales).
+
+100 % statique : pas de backend, pas de base de données, pas de login, aucune API. **Aucune requête externe** : pas de CDN, pas de police web distante, pas de cookie, pas de traceur (la police Geist est hébergée dans le dépôt).
 
 ```
-index.html      Page principale (anglais)
-privacy.html    Privacy Policy
-terms.html      Terms of Service
-styles.css      Styles
-script.js       Animations, scène 3D du hero, et la config de l'email de contact
-favicon.svg     Favicon (placeholder à remplacer par votre logo)
+index.html            Page principale (anglais)
+privacy.html          Privacy Policy
+terms.html            Terms of Service
+styles.css            Styles (mobile-first) + tokens de couleur / typo en haut du fichier
+script.js             Config email, menu mobile, scène 3D du hero, progression du workflow
+favicon.svg           Favicon (même système visuel que le logo)
+assets/logo-mark.svg  Symbole du logo (couleur) · logo-mark-mono.svg (monochrome)
 assets/og-image.png   Image de partage (Open Graph / Twitter), 1200×630
+assets/fonts/         Geist Sans (variable, licence SIL OFL) + licence
 sitemap.xml · robots.txt
-scripts/set-domain.sh Outil pour changer l'URL du site dans tous les fichiers SEO
-.nojekyll       Dit à GitHub Pages de servir les fichiers tels quels
+scripts/set-domain.sh Change l'URL du site dans tous les fichiers SEO
+.nojekyll             Dit à GitHub Pages de servir les fichiers tels quels
 ```
 
 ---
@@ -114,7 +117,7 @@ Dans **`script.js`**, tout en haut du fichier :
 ```js
 const SITE_CONFIG = {
   CONTACT_EMAIL: "",            // ← mettez votre adresse ici, par ex. "hello@votre-domaine.com"
-  EMAIL_SUBJECT: "Hello from the AI E-commerce Operator website",
+  EMAIL_SUBJECT: "Hello from the Operator website",
 };
 ```
 
@@ -148,7 +151,9 @@ Pensez aussi à la date `Last updated` dans `privacy.html` / `terms.html` quand 
 
 ## Personnalisation rapide
 
-- **Textes** : tout est dans `index.html`, section par section.
-- **Couleurs** : variables CSS en haut de `styles.css` (`--c1` … `--c5`).
-- **Favicon / logo** : remplacez `favicon.svg`. Remplacez `assets/og-image.png` (1200×630) par votre visuel.
-- **Accessibilité / performance** : `prefers-reduced-motion` est respecté (la scène 3D devient une image fixe) ; les effets lourds sont allégés sur mobile et l'animation du hero se met en pause hors écran ou dans un onglet masqué.
+- **Textes** : tout est dans `index.html`, section par section (Hero, Workflow, Capabilities, Learning loop, About, Contact).
+- **Couleurs et typographie** : variables CSS en haut de `styles.css` (`:root`) :
+  `--bg #08090B`, `--ink #F4F4F2`, `--muted #8A8F98`, `--accent #7C5CFF` (`--accent-2 #A99BFF` pour le texte accentué), police `Geist` (corps 420, labels 500, titres 620).
+- **Logo** : le symbole est défini une seule fois (`<symbol id="logo">` dans chaque page) et existe en fichiers SVG dans `assets/`. Pour le changer, modifiez le `<symbol>` (index, privacy, terms), `favicon.svg` et `assets/logo-mark*.svg`.
+- **Image de partage** : remplacez `assets/og-image.png` (1200×630).
+- **Accessibilité / performance** : `prefers-reduced-motion` est respecté (la scène du hero devient une image fixe, tout le contenu reste visible) ; sur mobile la scène est allégée (moins de particules, 30 fps, pas de parallaxe souris) ; toutes les animations se mettent en pause hors écran.

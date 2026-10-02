@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AI E-commerce Operator — script.js
+   Operator — script.js
    No dependencies, no network requests. Everything runs in the browser.
    ========================================================================== */
 
@@ -13,7 +13,7 @@ const SITE_CONFIG = {
   CONTACT_EMAIL: "",
 
   // Subject pre-filled in the visitor's email client.
-  EMAIL_SUBJECT: "Hello from the AI E-commerce Operator website",
+  EMAIL_SUBJECT: "Hello from the Operator website",
 };
 
 (() => {
@@ -22,9 +22,15 @@ const SITE_CONFIG = {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const mq = (q) => window.matchMedia(q);
+  const onChange = (m, fn) => (m.addEventListener ? m.addEventListener('change', fn) : m.addListener(fn));
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const reduceMQ = mq('(prefers-reduced-motion: reduce)');
   const coarseMQ = mq('(hover: none), (pointer: coarse)');
   const narrowMQ = mq('(max-width: 760px)');
+  // Must match the "wide" hero layout query in styles.css
+  const wideMQ = mq('(min-width: 981px), (min-width: 640px) and (orientation: landscape)');
+  const navDesktopMQ = mq('(min-width: 900px)');
+  const root = document.documentElement;
   const TAU = Math.PI * 2;
 
   /* ------------------------------------------------------------------ Contact */
@@ -44,23 +50,41 @@ const SITE_CONFIG = {
     if (email) $$('[data-contact-text]').forEach((el) => { el.textContent = email; });
   }
 
-  /* ---------------------------------------------------------------- Navigation */
+  /* ---------------------------------------------------------------- Navigation
+     Mobile: full-screen menu with scroll lock, focus trap and Escape to close.
+     Desktop: inline links + scroll-spy. */
   function initNav() {
     const header = $('#site-header');
     const toggle = $('#nav-toggle');
-    if (!header || !toggle) return;
+    const nav = $('#primary-nav');
+    if (!header || !toggle || !nav) return;
 
-    const setOpen = (open) => {
+    const behind = [$('main'), $('.site-footer')].filter(Boolean);
+    const isOpen = () => header.classList.contains('nav-open');
+
+    const setOpen = (open, { restoreFocus = true } = {}) => {
+      if (open === isOpen()) return;
       header.classList.toggle('nav-open', open);
+      root.classList.toggle('nav-lock', open);
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      behind.forEach((el) => { if ('inert' in el) el.inert = open; });
+      if (open) requestAnimationFrame(() => $('a', nav)?.focus());
+      else if (restoreFocus) toggle.focus({ preventScroll: true });
     };
-    toggle.addEventListener('click', () => setOpen(!header.classList.contains('nav-open')));
-    $$('#primary-nav a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+
+    toggle.addEventListener('click', () => setOpen(!isOpen()));
+    $$('a', nav).forEach((a) => a.addEventListener('click', () => setOpen(false, { restoreFocus: false })));
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && header.classList.contains('nav-open')) { setOpen(false); toggle.focus(); }
+      if (!isOpen()) return;
+      if (e.key === 'Escape') { setOpen(false); return; }
+      if (e.key !== 'Tab') return;
+      const items = [$('.brand', header), toggle, ...$$('a', nav)].filter((el) => el && el.offsetParent !== null);
+      const first = items[0]; const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
-    mq('(min-width: 981px)').addEventListener?.('change', (e) => { if (e.matches) setOpen(false); });
+    onChange(navDesktopMQ, (e) => { if (e.matches) setOpen(false, { restoreFocus: false }); });
 
     // Scroll-spy
     const links = new Map($$('#primary-nav ul a').map((a) => [a.getAttribute('href'), a]));
@@ -78,22 +102,49 @@ const SITE_CONFIG = {
 
   /* ----------------------------------------------- Reveal + pause offscreen */
   function initReveal() {
-    const groups = $$('[data-stagger]');
-    groups.forEach((g) => Array.from(g.children).forEach((c, i) => c.style.setProperty('--d', (i * 0.07).toFixed(2) + 's')));
+    $$('[data-stagger]').forEach((g) => Array.from(g.children).forEach((c, i) => c.style.setProperty('--d', (i * 0.06).toFixed(2) + 's')));
 
     const items = $$('.reveal');
-    if (!('IntersectionObserver' in window)) { items.forEach((el) => el.classList.add('in')); $$('[data-anim]').forEach((el) => el.classList.add('in-view')); return; }
-
+    if (!('IntersectionObserver' in window)) {
+      items.forEach((el) => el.classList.add('in'));
+      $$('[data-anim]').forEach((el) => el.classList.add('in-view'));
+      return;
+    }
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
     }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
     items.forEach((el) => io.observe(el));
 
-    // Animated sections only run their CSS animations while visible.
+    // Sections only run their CSS animations while they are on screen.
     const vis = new IntersectionObserver((entries) => {
       entries.forEach((en) => en.target.classList.toggle('in-view', en.isIntersecting));
     }, { rootMargin: '120px 0px' });
     $$('[data-anim]').forEach((el) => vis.observe(el));
+  }
+
+  /* ------------------------------------- Workflow: progression follows scroll */
+  function createFlow() {
+    const flow = $('#flow');
+    if (!flow) return () => {};
+    const nodes = $$('.fnode', flow);
+    flow.classList.add('flow-js');
+    let shown = -1;
+
+    const paint = (n) => {
+      if (n === shown) return;
+      shown = n;
+      nodes.forEach((el, i) => el.classList.toggle('lit', i < n));
+      flow.classList.toggle('is-complete', n >= nodes.length && !reduceMQ.matches);
+    };
+    if (reduceMQ.matches) { paint(nodes.length); return () => {}; }
+
+    return () => {
+      const r = flow.getBoundingClientRect();
+      const vh = window.innerHeight;
+      if (r.bottom < -100 || r.top > vh + 100) return;           // off-screen: nothing to do
+      const p = clamp((vh * 0.85 - r.top) / (r.height + vh * 0.2), 0, 1);
+      paint(Math.ceil(p * nodes.length - 0.001));
+    };
   }
 
   /* ---------------------------------------------------- Scroll-linked effects */
@@ -101,25 +152,17 @@ const SITE_CONFIG = {
     const header = $('#site-header');
     const bar = $('.progress');
     const hero = $('#top');
-    const px = $$('.px');
+    const flowUpdate = createFlow();
     let ticking = false;
 
     const update = () => {
       ticking = false;
       const y = window.scrollY || window.pageYOffset;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const max = root.scrollHeight - window.innerHeight;
       if (bar) bar.style.setProperty('--p', max > 0 ? Math.min(1, y / max).toFixed(4) : 0);
       if (header) header.classList.toggle('is-scrolled', y > 12);
-      if (hero) hero.style.setProperty('--hp', Math.min(1, Math.max(0, y / (hero.offsetHeight * 0.85))).toFixed(3));
-      if (!reduceMQ.matches && !coarseMQ.matches && px.length) {
-        const vh = window.innerHeight;
-        px.forEach((el) => {
-          const r = el.parentElement.getBoundingClientRect();
-          if (r.bottom < -200 || r.top > vh + 200) return;
-          const depth = parseFloat(el.dataset.depth) || 0;
-          el.style.setProperty('--py', ((r.top + r.height / 2 - vh / 2) * depth).toFixed(1) + 'px');
-        });
-      }
+      if (hero && y < hero.offsetHeight) hero.style.setProperty('--hp', clamp(y / (hero.offsetHeight * 0.85), 0, 1).toFixed(3));
+      flowUpdate();
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -127,13 +170,14 @@ const SITE_CONFIG = {
     update();
   }
 
-  /* ---------------------------------------------------------------- 3D tilt */
+  /* ---------------------------------------------------------------- 3D tilt
+     Pointer devices only: touch has no hover, so nothing relies on it. */
   function initTilt() {
+    if (coarseMQ.matches) return;
     $$('[data-tilt]').forEach((el) => {
-      const max = parseFloat(el.dataset.tilt) || 8;
+      const max = parseFloat(el.dataset.tilt) || 6;
       let frame = 0;
       let last = null;
-
       const apply = () => {
         frame = 0;
         const r = el.getBoundingClientRect();
@@ -141,8 +185,6 @@ const SITE_CONFIG = {
         const py = (last.clientY - r.top) / r.height;
         el.style.setProperty('--ry', ((px - 0.5) * 2 * max).toFixed(2) + 'deg');
         el.style.setProperty('--rx', ((0.5 - py) * 2 * max).toFixed(2) + 'deg');
-        el.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
-        el.style.setProperty('--my', (py * 100).toFixed(1) + '%');
       };
       el.addEventListener('pointermove', (e) => {
         if (reduceMQ.matches || e.pointerType === 'touch') return;
@@ -159,7 +201,7 @@ const SITE_CONFIG = {
     });
   }
 
-  /* -------------------------------------- Sequences (checklists, steppers…) */
+  /* -------------------------------------- Sequences (approval stepper, …) */
   function initSequences() {
     $$('[data-seq]').forEach((box) => {
       const items = $$('.seq-item', box);
@@ -169,9 +211,7 @@ const SITE_CONFIG = {
       let i = -1;
       let timer = 0;
 
-      const showStatic = () => {
-        items.forEach((it, n) => it.classList.toggle('on', mode === 'progress' || n === 0));
-      };
+      const showStatic = () => items.forEach((it, n) => it.classList.toggle('on', mode === 'progress' || n === 0));
       const tick = () => {
         i += 1;
         if (mode === 'progress') {
@@ -189,7 +229,10 @@ const SITE_CONFIG = {
     });
   }
 
-  /* ----------------------------------------------------------- Hero canvas */
+  /* ----------------------------------------------------------- Hero canvas
+     A product travels around the commerce lifecycle: Signal → Validate → Source →
+     Offer → Create → Launch → Measure → Learn → back to Signal. Pure canvas 2D
+     with a small 3D projection — no libraries, adaptive quality, paused off-screen. */
   function initHero() {
     const hero = $('#top');
     const canvas = $('#hero-canvas');
@@ -197,58 +240,58 @@ const SITE_CONFIG = {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const LABELS = ['Discovery', 'Intelligence', 'Sourcing', 'Economics', 'Offer', 'Creative', 'Store', 'Advertising', 'Measurement', 'Learning'];
+    const LABELS = ['Signal', 'Validate', 'Source', 'Offer', 'Create', 'Launch', 'Measure', 'Learn'];
     const N = LABELS.length;
-    const FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
-    const CAM = 4.8; // camera distance (unit-radius scene)
-    const hue = (i) => 188 + (i / N) * 150; // cyan → violet → magenta
+    const FONT = '"Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    const CAM = 4.8;                 // camera distance (unit-radius scene)
+    const HUE = 256;                 // single accent hue (#7C5CFF)
 
-    // Quality levels: 2 = full, 1 = reduced, 0 = minimal. Adapts to the device.
+    // Quality: 2 = full, 1 = reduced (phones, low-core CPUs), 0 = minimal. Drops further if frames stay slow.
     const lowPower = () => narrowMQ.matches || coarseMQ.matches || (navigator.hardwareConcurrency || 8) <= 4;
     let quality = lowPower() ? 1 : 2;
 
     let W = 0, H = 0, dpr = 1, cx = 0, cy = 0, S = 0, wide = true;
-    let running = false, visible = true, raf = 0, last = 0, tAccum = 0, slow = 0, frames = 0, emaDt = 16;
+    let running = false, visible = true, raf = 0, last = 0, lastDraw = 0, tAccum = 0, slow = 0, frames = 0, emaDt = 16;
     const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
 
-    /* Pre-rendered glow sprites (cheap additive lights) */
-    const sprite = (h, l = 62) => {
+    /* Pre-rendered glow sprites */
+    const sprite = (h, s, l) => {
       const c = document.createElement('canvas');
       c.width = c.height = 64;
       const g = c.getContext('2d');
       const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-      gr.addColorStop(0, `hsla(${h},100%,${l + 18}%,1)`);
-      gr.addColorStop(0.25, `hsla(${h},100%,${l}%,.55)`);
-      gr.addColorStop(1, `hsla(${h},100%,${l}%,0)`);
+      gr.addColorStop(0, `hsla(${h},${s}%,${Math.min(96, l + 22)}%,1)`);
+      gr.addColorStop(0.25, `hsla(${h},${s}%,${l}%,.55)`);
+      gr.addColorStop(1, `hsla(${h},${s}%,${l}%,0)`);
       g.fillStyle = gr;
       g.fillRect(0, 0, 64, 64);
       return c;
     };
-    const sprites = Array.from({ length: N }, (_, i) => sprite(hue(i)));
-    const coreSprite = sprite(236, 55);
+    const glow = sprite(HUE, 100, 64);
+    const glowSoft = sprite(HUE, 90, 55);
+    const glowWhite = sprite(HUE + 10, 100, 82);
 
     /* Scene data (unit space) */
     const nodes = Array.from({ length: N }, (_, i) => {
       const th = (i / N) * TAU;
-      return { p: [Math.cos(th), 0.27 * Math.sin(2 * th + 0.6) + 0.1 * Math.sin(3 * th), Math.sin(th)], x: 0, y: 0, z: 0, s: 1, sx: 0, sy: 0 };
+      return { p: [Math.cos(th), 0.24 * Math.sin(2 * th + 0.6) + 0.08 * Math.sin(3 * th), Math.sin(th)], x: 0, y: 0, z: 0, s: 1, sx: 0, sy: 0 };
     });
-    const sats = Array.from({ length: 16 }, (_, i) => ({
-      r: 1.25 + ((i * 37) % 10) / 14, a: (i / 16) * TAU + (i % 3), y: -0.7 + ((i * 53) % 14) / 10, w: 0.05 + ((i * 29) % 7) / 90,
-      anchor: Math.round(((i / 16) * N)) % N, x: 0, y2: 0, z: 0, s: 1, sx: 0, sy: 0,
+    const sats = Array.from({ length: 10 }, (_, i) => ({
+      r: 1.25 + ((i * 37) % 10) / 14, a: (i / 10) * TAU + (i % 3), y: -0.7 + ((i * 53) % 14) / 10, w: 0.05 + ((i * 29) % 7) / 90,
+      anchor: Math.round((i / 10) * N) % N, z: 0, s: 1, sx: 0, sy: 0,
     }));
     let dust = [];
     const buildDust = () => {
-      const n = quality === 2 ? 150 : quality === 1 ? 60 : 24;
+      const n = quality === 2 ? 110 : quality === 1 ? 40 : 18;
       dust = Array.from({ length: n }, () => ({
         x: (Math.random() - 0.5) * 4.2, y: (Math.random() - 0.5) * 2.8, z: (Math.random() - 0.5) * 4.2,
-        v: 0.01 + Math.random() * 0.03, r: 0.6 + Math.random() * 1.3, o: 0.25 + Math.random() * 0.6,
+        v: 0.01 + Math.random() * 0.03, r: 0.7 + Math.random() * 1.3, o: 0.25 + Math.random() * 0.6,
       }));
     };
     buildDust();
 
     const tmp = { x: 0, y: 0, z: 0, s: 1, sx: 0, sy: 0 };
     let cyaw = 1, syaw = 0, cpit = 1, spit = 0;
-
     const setRot = (yaw, pitch) => { cyaw = Math.cos(yaw); syaw = Math.sin(yaw); cpit = Math.cos(pitch); spit = Math.sin(pitch); };
     const rot = (x, y, z, o) => {
       const x1 = x * cyaw + z * syaw;
@@ -262,9 +305,9 @@ const SITE_CONFIG = {
       o.sy = cy + o.y * S * s;
       return o;
     };
-    const depth01 = (z) => Math.min(1, Math.max(0, (z + 1.6) / 3.2));
+    const depth01 = (z) => clamp((z + 1.6) / 3.2, 0, 1);
 
-    /* Quadratic bezier between rotated nodes a, b with an outward control point */
+    /* Quadratic bezier between two rotated nodes with an outward control point */
     const ctrl = (a, b) => ({ x: (a.x + b.x) * 0.64, y: (a.y + b.y) * 0.64 - 0.04, z: (a.z + b.z) * 0.64 });
     const bez = (a, c, b, t, o) => {
       const u = 1 - t;
@@ -276,22 +319,33 @@ const SITE_CONFIG = {
       return o;
     };
 
+    /* Logo spiral (same geometry as the brand mark), used as the 3D core */
+    const SPIRAL = Array.from({ length: 49 }, (_, i) => {
+      const t = i / 48;
+      const a = ((-100 + 345 * t) * Math.PI) / 180;
+      const r = (7.4 + 3.8 * t) * 0.0262;
+      return [Math.cos(a) * r, Math.sin(a) * r, t];
+    });
+    const ringPts = (r, n = 72) => Array.from({ length: n + 1 }, (_, i) => [Math.cos((i / n) * TAU) * r, 0, Math.sin((i / n) * TAU) * r]);
+    const RING_A = ringPts(1.0);
+    const RING_B = ringPts(1.55);
+
     function resize() {
       const r = hero.getBoundingClientRect();
       W = Math.max(1, Math.round(r.width));
       H = Math.max(1, Math.round(r.height));
-      dpr = Math.min(window.devicePixelRatio || 1, quality === 2 ? 2 : quality === 1 ? 1.5 : 1);
+      dpr = Math.min(window.devicePixelRatio || 1, quality === 2 ? 2 : 1.5);
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
-      wide = W >= 981;
-      if (wide) { cx = W * 0.72; cy = H * 0.52; S = Math.min(H * 0.34, W * 0.2); }
-      else {
-        // Stacked layout: the scene sits in the gap between the headline and the lede.
-        const inner = $('.hero-inner', hero), h1 = $('h1', hero), lede = $('.lede', hero);
+      wide = wideMQ.matches;
+      if (wide) {
+        cx = W * 0.72; cy = H * 0.53; S = Math.min(H * 0.33, W * 0.19);
+      } else {
+        // Stacked layout: the scene fills the gap between the headline and the supporting line.
+        const inner = $('.hero-inner', hero); const h1 = $('h1', hero); const lede = $('.lede', hero);
         const top = inner.offsetTop + h1.offsetTop + h1.offsetHeight;
-        const bottom = inner.offsetTop + lede.offsetTop;
-        const gap = Math.max(160, bottom - top);
-        cx = W * 0.5; cy = top + gap / 2 + 6; S = Math.min(W * (W < 640 ? 0.36 : 0.3), gap * (W < 640 ? 0.4 : 0.42));
+        const gap = Math.max(160, inner.offsetTop + lede.offsetTop - top);
+        cx = W * 0.5; cy = top + gap / 2 + 4; S = Math.min(W * 0.4, gap * 0.46);
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!running) draw(2.4);
@@ -304,11 +358,6 @@ const SITE_CONFIG = {
         if (i === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
       }
     }
-    const ringPts = (r, n = 72) => Array.from({ length: n + 1 }, (_, i) => [Math.cos((i / n) * TAU) * r, 0, Math.sin((i / n) * TAU) * r]);
-    const RING_A = ringPts(1.0);
-    const RING_B = ringPts(1.55);
-    const lat = (n = 40) => Array.from({ length: n + 1 }, (_, i) => [Math.cos((i / n) * TAU), Math.sin((i / n) * TAU)]);
-    const CIRCLE = lat();
 
     function draw(t) {
       ctx.clearRect(0, 0, W, H);
@@ -318,7 +367,7 @@ const SITE_CONFIG = {
       ctx.globalCompositeOperation = 'lighter';
 
       /* Dust */
-      ctx.fillStyle = '#9fb4ff';
+      ctx.fillStyle = '#bdb4ff';
       const dyaw = yaw * 0.6; const cd = Math.cos(dyaw), sd = Math.sin(dyaw);
       for (let i = 0; i < dust.length; i++) {
         const d = dust[i];
@@ -335,10 +384,10 @@ const SITE_CONFIG = {
 
       /* Guide rings */
       ctx.lineWidth = 1;
-      ctx.strokeStyle = '#8aa0ff';
-      ctx.globalAlpha = 0.1;
+      ctx.strokeStyle = '#a99bff';
+      ctx.globalAlpha = 0.11;
       polyline3D(RING_A, (p, o) => rot(p[0], p[1], p[2], o)); ctx.stroke();
-      if (quality > 0) {
+      if (quality === 2) {
         ctx.globalAlpha = 0.05;
         ctx.setLineDash([2, 8]);
         polyline3D(RING_B, (p, o) => rot(p[0], p[1] - 0.15, p[2], o)); ctx.stroke();
@@ -347,161 +396,167 @@ const SITE_CONFIG = {
 
       /* Transform nodes + satellites */
       for (let i = 0; i < N; i++) { const n = nodes[i]; rot(n.p[0], n.p[1], n.p[2], n); }
-      for (let i = 0; i < sats.length; i++) {
+      const satCount = quality === 2 ? sats.length : quality === 1 ? 5 : 0;
+      for (let i = 0; i < satCount; i++) {
         const s = sats[i]; const a = s.a + t * s.w;
         rot(Math.cos(a) * s.r, s.y, Math.sin(a) * s.r, tmp);
-        s.x = tmp.x; s.y2 = tmp.y; s.z = tmp.z; s.s = tmp.s; s.sx = tmp.sx; s.sy = tmp.sy;
+        s.z = tmp.z; s.s = tmp.s; s.sx = tmp.sx; s.sy = tmp.sy;
       }
 
-      const active = (t * 0.45) % N; // travelling highlight
-      const glowOf = (i) => { let d = Math.abs(i - active); d = Math.min(d, N - d); return Math.max(0, 1 - d * 0.8); };
+      // The product: travels one stage every 2.2 s, easing in and out of each node.
+      const prog = (((t / 2.2) % N) + N) % N;
+      const seg = Math.floor(prog);
+      const u = prog - seg;
+      const ease = u * u * (3 - 2 * u);
+      const glowOf = (i) => { let d = Math.abs(i - (seg + ease)); d = Math.min(d, N - d); return Math.max(0, 1 - d * 0.9); };
 
-      /* Satellite links + dots */
-      if (quality > 0) {
+      /* Satellites */
+      for (let i = 0; i < satCount; i++) {
+        const s = sats[i]; const n = nodes[s.anchor];
+        const dep = depth01(s.z);
         ctx.lineWidth = 1;
-        for (let i = 0; i < sats.length; i++) {
-          const s = sats[i]; const n = nodes[s.anchor];
-          const dep = depth01(s.z);
-          ctx.globalAlpha = 0.06 + 0.1 * dep;
-          ctx.strokeStyle = `hsl(${hue(s.anchor)},90%,70%)`;
-          ctx.beginPath(); ctx.moveTo(n.sx, n.sy); ctx.lineTo(s.sx, s.sy); ctx.stroke();
-          ctx.globalAlpha = 0.25 + 0.5 * dep;
-          const sz = 9 * s.s;
-          ctx.drawImage(sprites[s.anchor], s.sx - sz, s.sy - sz, sz * 2, sz * 2);
-        }
+        ctx.strokeStyle = '#a99bff';
+        ctx.globalAlpha = 0.05 + 0.08 * dep;
+        ctx.beginPath(); ctx.moveTo(n.sx, n.sy); ctx.lineTo(s.sx, s.sy); ctx.stroke();
+        ctx.globalAlpha = 0.2 + 0.4 * dep;
+        const sz = 8 * s.s;
+        ctx.drawImage(glowSoft, s.sx - sz, s.sy - sz, sz * 2, sz * 2);
       }
 
-      /* Cross links (neural mesh) */
-      if (quality === 2) {
-        ctx.lineWidth = 1;
-        for (let i = 0; i < N; i++) {
-          const a = nodes[i]; const b = nodes[(i + 3) % N];
-          ctx.globalAlpha = 0.035 + 0.05 * depth01((a.z + b.z) / 2);
-          ctx.strokeStyle = `hsl(${hue(i)},90%,72%)`;
-          ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
-        }
-      }
-
-      /* Ring edges + data packets */
+      /* Ring edges + small packets */
       const SEG = quality === 2 ? 18 : 10;
+      const pt = { s: 1, z: 0, sx: 0, sy: 0 };
       for (let i = 0; i < N; i++) {
         const a = nodes[i]; const b = nodes[(i + 1) % N];
         const c = ctrl(a, b);
         const dep = depth01((a.z + b.z) / 2);
-        const g = ctx.createLinearGradient(a.sx, a.sy, b.sx, b.sy);
-        g.addColorStop(0, `hsl(${hue(i)},95%,66%)`);
-        g.addColorStop(1, `hsl(${hue((i + 1) % N)},95%,66%)`);
-        const pt = { s: 1, z: 0, sx: 0, sy: 0 };
+        const avgS = (a.s + b.s) / 2;
         ctx.beginPath();
         for (let k = 0; k <= SEG; k++) { bez(a, c, b, k / SEG, pt); if (k === 0) ctx.moveTo(pt.sx, pt.sy); else ctx.lineTo(pt.sx, pt.sy); }
-        ctx.strokeStyle = g;
-        ctx.lineWidth = 5 * ((a.s + b.s) / 2);
-        ctx.globalAlpha = 0.05 + 0.06 * dep;
-        ctx.stroke();
-        ctx.lineWidth = 1.4 * ((a.s + b.s) / 2);
-        ctx.globalAlpha = 0.22 + 0.5 * dep;
+        ctx.strokeStyle = `hsl(${HUE},95%,72%)`;
+        if (quality === 2) { ctx.lineWidth = 5 * avgS; ctx.globalAlpha = 0.045 + 0.05 * dep; ctx.stroke(); }
+        ctx.lineWidth = 1.3 * avgS;
+        ctx.globalAlpha = 0.2 + 0.45 * dep;
         ctx.stroke();
 
         const packets = quality === 2 ? 2 : 1;
         for (let k = 0; k < packets; k++) {
-          const u = (t * 0.2 + i * 0.37 + k * 0.5) % 1;
-          for (let tr = 0; tr < 4; tr++) {
-            const uu = u - tr * 0.025;
-            if (uu < 0) continue;
-            bez(a, c, b, uu, pt);
-            const sz = (16 - tr * 3) * pt.s;
-            ctx.globalAlpha = (0.95 - tr * 0.24) * (0.45 + 0.55 * depth01(pt.z));
-            ctx.drawImage(sprites[i], pt.sx - sz, pt.sy - sz, sz * 2, sz * 2);
-          }
+          const q = (t * 0.2 + i * 0.37 + k * 0.5) % 1;
+          bez(a, c, b, q, pt);
+          const sz = 13 * pt.s;
+          ctx.globalAlpha = 0.8 * (0.4 + 0.6 * depth01(pt.z));
+          ctx.drawImage(glow, pt.sx - sz, pt.sy - sz, sz * 2, sz * 2);
         }
+      }
+
+      /* The product token (bright, with a short trail) */
+      {
+        const a = nodes[seg % N]; const b = nodes[(seg + 1) % N];
+        const c = ctrl(a, b);
+        for (let tr = 0; tr < 7; tr++) {
+          const uu = clamp(ease - tr * 0.035, 0, 1);
+          bez(a, c, b, uu, pt);
+          const sz = (24 - tr * 2.6) * pt.s;
+          ctx.globalAlpha = (0.95 - tr * 0.13) * (0.5 + 0.5 * depth01(pt.z));
+          ctx.drawImage(glowWhite, pt.sx - sz, pt.sy - sz, sz * 2, sz * 2);
+        }
+        bez(a, c, b, ease, pt);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(pt.sx, pt.sy, 3.6 * pt.s, 0, TAU); ctx.fill();
       }
 
       /* Core + nodes, sorted back to front */
       const order = nodes.map((n, i) => ({ z: n.z, i })).concat([{ z: 0, i: -1 }]).sort((p, q) => p.z - q.z);
       for (let o = 0; o < order.length; o++) {
         const i = order[o].i;
-        if (i === -1) { drawCore(t); continue; }
-        drawNode(i, t, glowOf(i));
+        if (i === -1) drawCore(t); else drawNode(i, glowOf(i));
       }
 
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
     }
 
+    /* The brand mark, in 3D, at the centre of the loop */
     function drawCore(t) {
       rot(0, 0, 0, tmp);
-      const g = 0.55 * S * tmp.s;
-      ctx.globalAlpha = 0.5 + 0.12 * Math.sin(t * 1.4);
-      ctx.drawImage(coreSprite, tmp.sx - g, tmp.sy - g, g * 2, g * 2);
-      if (quality === 0) return;
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = '#a9b8ff';
-      const R = 0.26;
-      for (let k = 0; k < 3; k++) {
-        const ph = t * (0.5 + k * 0.17) + k * 1.1;
-        const cph = Math.cos(ph), sph = Math.sin(ph);
-        ctx.globalAlpha = 0.22;
-        polyline3D(CIRCLE, (p, o) => {
-          const u = p[0] * R, v = p[1] * R;
-          if (k === 0) return rot(u, v * cph, v * sph, o); // great circle spinning about X
-          if (k === 1) return rot(v * cph, u, v * sph, o); // … about Y
-          return rot(u * cph, u * sph, v, o);              // … about Z
-        });
+      const g = 0.62 * S * tmp.s;
+      ctx.globalAlpha = 0.34 + 0.08 * Math.sin(t * 1.3);
+      ctx.drawImage(glowSoft, tmp.sx - g, tmp.sy - g, g * 2, g * 2);
+      const ph = Math.sin(t * 0.35) * 0.9;         // gentle swing around the vertical axis
+      const cph = Math.cos(ph), sph = Math.sin(ph);
+      const wpx = Math.max(2.5, 0.085 * S);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const stroke = (from, to, color, alpha) => {
+        ctx.beginPath();
+        let started = false;
+        for (let i = from; i <= to; i++) {
+          const p = SPIRAL[i];
+          rot(p[0] * cph, p[1], -p[0] * sph, tmp);
+          if (!started) { ctx.moveTo(tmp.sx, tmp.sy); started = true; } else ctx.lineTo(tmp.sx, tmp.sy);
+        }
+        ctx.lineWidth = wpx;
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = alpha;
         ctx.stroke();
-      }
+      };
+      stroke(0, 36, '#F4F4F2', 0.85);
+      stroke(36, 48, '#8f78ff', 1);
+      ctx.lineCap = 'butt';
     }
 
-    function drawNode(i, t, glow) {
+    function drawNode(i, g) {
       const n = nodes[i];
       const dep = depth01(n.z);
       const s = n.s;
-      const gSize = (34 + 40 * glow) * s;
-      ctx.globalAlpha = (0.5 + 0.5 * glow) * (0.5 + 0.5 * dep);
-      ctx.drawImage(sprites[i], n.sx - gSize, n.sy - gSize, gSize * 2, gSize * 2);
+      const gSize = (30 + 40 * g) * s;
+      ctx.globalAlpha = (0.4 + 0.6 * g) * (0.5 + 0.5 * dep);
+      ctx.drawImage(glow, n.sx - gSize, n.sy - gSize, gSize * 2, gSize * 2);
 
+      ctx.strokeStyle = `hsl(${HUE},100%,82%)`;
       ctx.globalAlpha = 0.35 + 0.65 * dep;
-      ctx.strokeStyle = `hsl(${hue(i)},95%,75%)`;
       ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(n.sx, n.sy, 9 * s, 0, TAU); ctx.stroke();
-      if (glow > 0.05) {
-        const ph = (t * 0.45) % 1;
-        ctx.globalAlpha = glow * (1 - ph) * 0.8;
-        ctx.beginPath(); ctx.arc(n.sx, n.sy, (10 + ph * 26) * s, 0, TAU); ctx.stroke();
-      }
-      ctx.globalAlpha = 0.7 + 0.3 * dep;
-      ctx.fillStyle = `hsl(${hue(i)},100%,${84 + glow * 10}%)`;
-      ctx.beginPath(); ctx.arc(n.sx, n.sy, (3.4 + glow * 1.4) * s, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(n.sx, n.sy, 8.5 * s, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = 0.75 + 0.25 * dep;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(n.sx, n.sy, (3 + g * 1.6) * s, 0, TAU); ctx.fill();
 
-      // Label
-      const fs = Math.max(9, (wide ? 11.5 : 10) * s);
+      // Label: stage name (+ index on wide layouts); the stage the product is in brightens.
+      if (!wide && dep < 0.42 && g < 0.5) return;     // stacked layout: skip labels of far-side nodes to avoid overlaps
+      const fs = Math.max(11, (wide ? 13 : 12) * s);
       ctx.font = `500 ${fs.toFixed(1)}px ${FONT}`;
       ctx.textBaseline = 'middle';
       const right = n.sx >= cx;
       ctx.textAlign = right ? 'left' : 'right';
       const lx = n.sx + (right ? 1 : -1) * 15 * s;
-      ctx.globalAlpha = (0.22 + 0.7 * dep) * (0.75 + 0.25 * glow);
-      ctx.fillStyle = '#dbe3ff';
-      ctx.fillText(LABELS[i].toUpperCase(), lx, n.sy - 6 * s);
-      ctx.globalAlpha *= 0.55;
-      ctx.fillStyle = `hsl(${hue(i)},90%,72%)`;
-      ctx.font = `500 ${(fs * 0.86).toFixed(1)}px ${FONT}`;
-      ctx.fillText(String(i + 1).padStart(2, '0'), lx, n.sy + 7 * s);
+      ctx.globalAlpha = clamp((0.28 + 0.62 * dep) * (0.7 + 0.3 * g) + g * 0.2, 0, 1);
+      ctx.fillStyle = '#F4F4F2';
+      ctx.fillText(LABELS[i], lx, wide ? n.sy - 6 * s : n.sy);
+      if (wide) {
+        ctx.globalAlpha *= 0.7;
+        ctx.fillStyle = '#A99BFF';
+        ctx.font = `500 ${(fs * 0.8).toFixed(1)}px ${FONT}`;
+        ctx.fillText(String(i + 1).padStart(2, '0'), lx, n.sy + 8 * s);
+      }
     }
 
     /* Loop control */
     function frame(now) {
       raf = requestAnimationFrame(frame);
-      const dt = Math.min(0.1, (now - last) / 1000);
+      const dt = clamp((now - last) / 1000, 0, 0.1);
       last = now;
       mouse.x += (mouse.tx - mouse.x) * 0.06;
       mouse.y += (mouse.ty - mouse.y) * 0.06;
       tAccum += dt;
+      // Reduced quality renders at ~30 fps to save battery.
+      if (quality < 2 && now - lastDraw < 30) return;
+      lastDraw = now;
       draw(tAccum);
 
-      // Adaptive quality: drop a level if frames stay slow.
+      // Adaptive quality: step down if frames stay slow.
       emaDt = emaDt * 0.95 + dt * 1000 * 0.05;
       frames++;
-      if (frames > 90 && emaDt > 30 && quality > 0) {
+      if (frames > 90 && emaDt > (quality < 2 ? 45 : 30) && quality > 0) {
         slow++;
         if (slow > 20) { quality--; slow = 0; frames = 0; emaDt = 16; buildDust(); resize(); }
       } else if (emaDt <= 30) slow = 0;
@@ -511,26 +566,28 @@ const SITE_CONFIG = {
       running = true; last = performance.now(); raf = requestAnimationFrame(frame);
     }
     function stop() { running = false; cancelAnimationFrame(raf); }
-    const sync = () => {
-      if (reduceMQ.matches) { stop(); draw(2.4); } else start();
-    };
+    const sync = () => { if (reduceMQ.matches) { stop(); draw(2.4); } else start(); };
 
-    /* Pointer interaction (desktop only) */
-    window.addEventListener('pointermove', (e) => {
-      if (coarseMQ.matches || reduceMQ.matches || !visible) return;
-      mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
-      mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
-      hero.style.setProperty('--lx', ((e.clientX / window.innerWidth) * 100).toFixed(1) + '%');
-      hero.style.setProperty('--ly', ((e.clientY / window.innerHeight) * 100).toFixed(1) + '%');
-    }, { passive: true });
+    /* Pointer parallax: fine pointers only */
+    if (!coarseMQ.matches) {
+      window.addEventListener('pointermove', (e) => {
+        if (reduceMQ.matches || !visible || e.pointerType === 'touch') return;
+        mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+        mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+      }, { passive: true });
+    }
 
-    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(hero); else window.addEventListener('resize', resize);
+    let resizeFrame = 0;
+    const scheduleResize = () => { if (!resizeFrame) resizeFrame = requestAnimationFrame(() => { resizeFrame = 0; resize(); }); };
+    if ('ResizeObserver' in window) { const ro = new ResizeObserver(scheduleResize); ro.observe(hero); ro.observe($('.hero-inner', hero)); }
+    else window.addEventListener('resize', scheduleResize);
     if ('IntersectionObserver' in window) {
       new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) start(); else stop(); }, { threshold: 0 }).observe(hero);
     }
     document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else start(); });
-    reduceMQ.addEventListener?.('change', sync);
-    narrowMQ.addEventListener?.('change', () => { quality = lowPower() ? Math.min(quality, 1) : quality; buildDust(); resize(); });
+    onChange(reduceMQ, sync);
+    onChange(wideMQ, scheduleResize);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleResize);
 
     resize();
     draw(2.4);
